@@ -3,7 +3,7 @@ import sys
 import jieba
 
 
-def build(input_content_file, output_doc_length_file, output_doc_freq_file, output_index_file):
+def build(input_content_file, output_doc_length_file, output_doc_freq_file, output_index_file=None, isIndex=False):
     index = {}
     df = {}
     doc_len = {}
@@ -29,9 +29,10 @@ def build(input_content_file, output_doc_length_file, output_doc_freq_file, outp
                 doc_index[w] += 1
 
             for w, freq in doc_index.items():
-                if w not in index:
-                    index[w] = {}
-                index[w][uid] = freq
+                if isIndex:
+                    if w not in index:
+                        index[w] = {}
+                    index[w][uid] = freq
                 if w not in df:
                     df[w] = 0
                 df[w] += 1
@@ -48,11 +49,12 @@ def build(input_content_file, output_doc_length_file, output_doc_freq_file, outp
             file.write('%s\t%d\n' % (w, f))
     print 'Df done!'
 
-    with open(output_index_file, 'w') as file:
-        for w, u_f in index.items():
-            u_f_list = ['%s,%d'%(u, f) for u, f in u_f.items()]
-            file.write(w.encode('utf-8', 'ignore') + '\t' + ':'.join(u_f_list)+'\n')
-    print 'Index done!'
+    if isIndex:
+        with open(output_index_file, 'w') as file:
+            for w, u_f in index.items():
+                u_f_list = ['%s,%d' % (u, f) for u, f in u_f.items()]
+                file.write(w.encode('utf-8', 'ignore') + '\t' + ':'.join(u_f_list) + '\n')
+        print 'Index done!'
 
 
 def make_queries(input_content_file, input_qrel_file, input_qid_file, output_queries_file):
@@ -66,17 +68,29 @@ def make_queries(input_content_file, input_qrel_file, input_qid_file, output_que
     print 'uids length:', len(uids)
 
     qid_uids_dict = {}
+    qid_rels_dict = {}
 
     with open(input_qrel_file) as file:
         for line in file:
             attr = re.split('[\t ]+', line.strip())
             qid = attr[0].strip()
             uid = attr[1].strip()
+            rel = attr[2].strip()
             if uid not in uids:
                 continue
             if qid not in qid_uids_dict:
                 qid_uids_dict[qid] = []
+
+            if qid not in qid_rels_dict:
+                qid_rels_dict[qid] = []
+
             qid_uids_dict[qid].append(uid)
+            qid_rels_dict[qid].append(rel)
+
+            # if qid not in qid_uids_rel_dict:
+            #     qid_uids_rel_dict[qid] = {}
+            # if uid not in qid_uids_rel_dict[qid]:
+            #     qid_uids_rel_dict[qid][uid] = rel
 
     print 'qid_uids_dict', len(qid_uids_dict)
 
@@ -93,7 +107,7 @@ def make_queries(input_content_file, input_qrel_file, input_qid_file, output_que
         for qid in qid_uids_dict:
             if qid not in qid_query_dict:
                 continue
-            output.write(qid + '\t' + qid_query_dict[qid] + '\t' + ' '.join(qid_uids_dict[qid]) + '\n')
+            output.write(qid + '\t' + qid_query_dict[qid] + '\t' + ' '.join(qid_uids_dict[qid]) +'\t'+' '.join(qid_rels_dict[qid])+ '\n')
 
 #
 # if __name__ == "__main__":

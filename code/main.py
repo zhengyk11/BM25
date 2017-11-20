@@ -36,17 +36,18 @@ if __name__ == '__main__':
         "qid_file": "../data/50_test_title/50_test_qid_seg.txt",
         "queries_file": "../data/queries/queries_50_test_title.txt",
 
-        "result_file": "../results/bm25_results__50_test_title.txt"
+        "result_file": "../results/bm25_results_50_test_title.txt"
     }
     """
     config = json.loads(config)
     print(json.dumps(config, indent=2))
-
-    build(config['content_file'], config['doc_length_file'], config['doc_freq_file'], config['index_file'])
+    print '[Main] buiding...'
+    build(config['content_file'], config['doc_length_file'], config['doc_freq_file'], config['index_file'], isIndex=True)
+    print '[Main] make_queries...'
     make_queries(config['content_file'], config['qrel_file'], config['qid_file'], config['queries_file'])
-
+    print '[Main] merging...'
     merge_doc_len([config['doc_length_file'], config['doc_length_file_2']], config['doc_length_file_merge'])
-    merge_index([config['index_file'], config['index_file_2']], config['index_file_merge'])
+    # merge_index([config['index_file'], config['index_file_2']], config['index_file_merge'])
     merge_doc_freq([config['doc_freq_file'], config['doc_freq_file_2']], config['doc_freq_file_merge'])
-
+    print '[Main] calculating BM25 scores...'
     BM25(config)

@@ -6,7 +6,7 @@ class BM25():
     def __init__(self, config):
         self.doc_freq_file   = config['doc_freq_file_merge']
         self.doc_length_file = config['doc_length_file_merge']
-        self.index_file      = config['index_file_merge']
+        self.index_file      = config['index_file']
         self.queries_file    = config['queries_file']
         self.result_file     = config['result_file']
 
@@ -68,7 +68,7 @@ class BM25():
             cnt = 0
             for line in file:
                 cnt += 1
-                if cnt % 50000 == 0:
+                if cnt % 5000 == 0:
                     print 'READ INDEX', cnt
                 temp_dict = {}
                 attr = re.split('[\t: ]+', line.strip())
@@ -95,16 +95,19 @@ class BM25():
                     continue
                 avdl = float((self.doc_len_dict[doc_id]) / self.avg_doc_len)
                 k = self.k1 * ((1 - self.b) + self.b * avdl)
-                score = (math.log(float(self.num_of_docs - self.df[q] + 0.5) / (self.df[q] + 0.5))) \
-                        * (((self.k1 + 1) * df) / (k + df)) * (((self.k2 + 1) * qf) / (self.k2 + qf))
-                if doc_id in bm_25_dict: # .has_key() and bm_25_dict[doc_id] != -1000:
-                    bm_25_dict[doc_id] += score
-                else:
-                    bm_25_dict[doc_id] = score
+                idf = math.log((self.num_of_docs - self.df[q] + 0.5) / (self.df[q] + 0.5))
+                score = idf * (((self.k1 + 1) * df) / (k + df)) * (((self.k2 + 1) * qf) / (self.k2 + qf))
+                # score = (math.log(float(self.num_of_docs) / self.df[q])) \
+                #         * (((self.k1 + 1) * df) / (k + df)) * (((self.k2 + 1) * qf) / (self.k2 + qf))
+                # if doc_id in bm_25_dict: # .has_key() and bm_25_dict[doc_id] != -1000:
+                bm_25_dict[doc_id] += score
+                # else:
+                #     bm_25_dict[doc_id] = score
 
 
     # read queries from query file
     def bm25_run(self):
+        print 'bm25_run...'
         results = {}
         with open(self.queries_file) as file:
             for line in file:
@@ -113,11 +116,14 @@ class BM25():
                 query = attr[1].lower()
                 query_words = query.split()
                 uids = attr[2].split()
+                rels = map(float, attr[3].split())
                 bm_25_dict = {}
-                for uid in uids:
+                rel_dict = {}
+                for uid, rel in zip(uids, rels):
                     if uid not in self.doc_len_dict:
                         continue
                     bm_25_dict[uid] = 0 # -1000
+                    rel_dict[uid] = rel
                 query_dict = {}
 
                 for w in query_words:
@@ -130,7 +136,7 @@ class BM25():
                 for uid in bm_25_dict:
                     if qid not in results:
                         results[qid] = {}
-                    results[qid][uid] = bm_25_dict[uid]
+                    results[qid][uid] = [rel_dict[uid], bm_25_dict[uid]]
         return results
 
 
@@ -138,6 +144,6 @@ class BM25():
         with open(self.result_file, 'w') as file:
             results = sorted(self.results.items(), key=lambda x:x[0])
             for qid, uid_score in results:
-                for uid, score in sorted(uid_score.items(), key=lambda x:x[1], reverse=True):
-                    file.write('%s\t%s\t%f\n'%(qid, uid, score))
+                for uid, rel_score in sorted(uid_score.items(), key=lambda x:x[1][1], reverse=True):
+                    file.write('%s\t%s\t%f\t%f\n'%(qid, uid, rel_score[0], rel_score[1]))
 
