@@ -1,0 +1,19 @@
+{
+    "content_file": "../data/inputs/real_valid_test_fulltext_seg_filter+solrex.txt",
+
+    "index_file": "../data/index/index.txt",
+
+    "doc_length_file": "../data/doc_length/doc_length.txt",
+    "doc_length_file_2": "../data/doc_length/doc_length_foundation.txt",
+    "doc_length_file_merge": "../data/doc_length/doc_length_merge.txt",
+
+    "doc_freq_file": "../data/doc_freq/doc_freq.txt",
+    "doc_freq_file_2": "../data/doc_freq/doc_freq_foundation.txt",
+    "doc_freq_file_merge": "../data/doc_freq/doc_freq_merge.txt",
+
+    "qrel_file": "../data/inputs/real_valid_qrel_HL+solrex.txt",
+    "qid_file": "../data/inputs/real_valid_test_qid_seg.txt",
+    "queries_file": "../data/queries/queries.txt",
+
+    "result_file": "../results/bm25_results_real_valid_HL+solrex.txt"
+    }
