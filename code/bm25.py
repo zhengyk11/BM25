@@ -3,12 +3,12 @@ import math
 
 
 class BM25():
-    def __init__(self, config):
-        self.doc_freq_file   = config['doc_freq_file_merge']
-        self.doc_length_file = config['doc_length_file_merge']
-        self.index_file      = config['index_file']
-        self.queries_file    = config['queries_file']
-        self.result_file     = config['result_file']
+    def __init__(self, doc_freq_file, doc_length_file, index_file, queries_file, result_file):
+        self.doc_freq_file   = doc_freq_file
+        self.doc_length_file = doc_length_file
+        self.index_file      = index_file
+        self.queries_file    = queries_file
+        self.result_file     = result_file
 
         # parameters for computation of bm25
         self.k1 = 1.2
@@ -17,13 +17,38 @@ class BM25():
         self.ri = 0.0
         self.R = 0.0
 
+        self.uids, self.query_info = self.read_queries()
         self.avg_doc_len, self.doc_len_dict = self.cal_doc_len()
         self.num_of_docs = len(self.doc_len_dict)
         self.df = self.read_df()
         self.index = self.read_index()
-        self.results = self.bm25_run()
-        self.output_result()
+        self.bm25_run()
+        # self.results = self.bm25_run()
+        # self.output_result()
 
+    def read_queries(self):
+        uids_dict = {}
+        query_info = {}
+        with open(self.queries_file) as file:
+            cnt = 0
+            for line in file:
+                cnt += 1
+                if cnt < 489000: #######################
+                    continue
+                if cnt % 500 == 0:
+                    print 'READ QUERY', cnt
+                attr = line.strip().split('\t')
+                qid = attr[0].strip()
+                query = attr[1].lower()
+                # query_words = query.split()
+                uids = attr[2].split()
+                query_info[qid] = dict(query=query,uids=uids)
+                # new_uids = {}
+                for uid in uids:
+                    uid = uid.strip()
+                    uids_dict[uid] = 0
+                # uids = new_uids
+        return uids_dict, query_info
 
 
     # calculate the doc length of each doc
@@ -33,15 +58,20 @@ class BM25():
         num_of_docs = 0
 
         with open(self.doc_length_file) as file:
+            # cnt = 0
             for line in file:
                 num_of_docs += 1
+                if num_of_docs % 500 == 0:
+                    print 'READ DOC LEN', num_of_docs
                 attr = re.split('[\t ]+', line.strip())
                 if len(attr) != 2:
                     print 'cal_doc_len error at line %d' % num_of_docs
                     exit(0)
                 docid = attr[0].strip()
+
                 doc_length = int(attr[1])
-                doc_len_dict[docid] = doc_length
+                if docid in self.uids:
+                    doc_len_dict[docid] = doc_length
                 total_doc_len += doc_length
 
         avg_doc_len = float(total_doc_len) / num_of_docs
@@ -52,7 +82,11 @@ class BM25():
     def read_df(self):
         df = {}
         with open(self.doc_freq_file) as file:
+            cnt = 0
             for line in file:
+                cnt += 1
+                if cnt % 500 == 0:
+                    print 'READ DF', cnt
                 attr = re.split('[\t ]+', line.strip())
                 if len(attr) != 2:
                     continue
@@ -83,16 +117,19 @@ class BM25():
                 for item in u_f:
                     u, f = item.split(',')
                     u = u.strip()
+                    if u not in self.uids:
+                        continue
                     f = int(f)
                     index[w][u] = f
         return index
 
     # compute the bm25 score
-    def compute_bm_25(self, q, qf, bm_25_dict, uids):
+    def compute_bm_25(self, q, qf, bm_25_dict):
         if q in self.index:
-            for doc_id, df in self.index[q].items():
-                if doc_id not in uids:
+            for doc_id in self.index[q]:
+                if doc_id not in bm_25_dict:
                     continue
+                df = self.index[q][doc_id]
                 avdl = float((self.doc_len_dict[doc_id]) / self.avg_doc_len)
                 k = self.k1 * ((1 - self.b) + self.b * avdl)
                 idf = math.log((self.num_of_docs - self.df[q] + 0.5) / (self.df[q] + 0.5))
@@ -108,42 +145,58 @@ class BM25():
     # read queries from query file
     def bm25_run(self):
         print 'bm25_run...'
-        results = {}
-        with open(self.queries_file) as file:
-            for line in file:
-                attr = line.strip().split('\t')
-                qid = attr[0].strip()
-                query = attr[1].lower()
-                query_words = query.split()
-                uids = attr[2].split()
-                rels = map(float, attr[3].split())
-                bm_25_dict = {}
-                rel_dict = {}
-                for uid, rel in zip(uids, rels):
-                    if uid not in self.doc_len_dict:
-                        continue
-                    bm_25_dict[uid] = 0 # -1000
-                    rel_dict[uid] = rel
-                query_dict = {}
+        output = open(self.result_file, 'w')
+        # results = {}
+        # with open(self.queries_file) as file:
+        cnt = 0
+        for qid in self.query_info:
+            cnt += 1
+            if cnt % 500 == 0:
+                print 'BM25', cnt
+            # attr = line.strip().split('\t')
+            # qid = attr[0].strip()
+            query = self.query_info[qid]['qid']
+            query_words = query.split()
+            uids = self.query_info[qid]['uids']
 
-                for w in query_words:
-                    if w in query_dict:
-                        query_dict[w] += 1
-                    else:
-                        query_dict[w] = 1
-                for k, v in query_dict.items():
-                    self.compute_bm_25(k, v, bm_25_dict, uids)
-                for uid in bm_25_dict:
-                    if qid not in results:
-                        results[qid] = {}
-                    results[qid][uid] = [rel_dict[uid], bm_25_dict[uid]]
-        return results
+            # rels = attr[3].split()
+            # rels_split = [r.split(':') for r in rels]
+            bm_25_dict = {}
+            # new_uids = {}
+            # rel_dict = {}
+            for uid in uids:
+                uid = uid.strip()
+                if uid not in self.doc_len_dict:
+                    continue
+                bm_25_dict[uid] = 0  # -1000
+                # new_uids[uid] = 0
+                # rel_dict[uid] = rel
+            # uids = new_uids
+            query_dict = {}
+
+            for w in query_words:
+                if w in query_dict:
+                    query_dict[w] += 1
+                else:
+                    query_dict[w] = 1
+            for k in query_dict:
+                v = query_dict[k]
+                self.compute_bm_25(k, v, bm_25_dict)
+            for uid in bm_25_dict:
+                output.write('%s\t%s\t%f\n' % (qid, uid, bm_25_dict[uid]))
+                # if qid not in results:
+                # results[qid] = {}
+                # results[qid][uid] = bm_25_dict[uid]# [rel_dict[uid], bm_25_dict[uid]]
+
+        output.close()
+        # return results
 
 
-    def output_result(self):
-        with open(self.result_file, 'w') as file:
-            results = sorted(self.results.items(), key=lambda x:x[0])
-            for qid, uid_score in results:
-                for uid, rel_score in sorted(uid_score.items(), key=lambda x:x[1][1], reverse=True):
-                    file.write('%s\t%s\t%f\t%f\n'%(qid, uid, rel_score[0], rel_score[1]))
+    # def output_result(self):
+    #     with open(self.result_file, 'w') as file:
+    #         results = sorted(self.results.items(), key=lambda x:x[0])
+    #         for qid, uid_score in results:
+    #             for uid, score in sorted(uid_score.items(), key=lambda x:x[1], reverse=True):
+    #                 # file.write('%s\t%s\t%s\t%f\n'%(qid, uid, ' '.join(rel_score[0]), rel_score[1]))
+    #                 file.write('%s\t%s\t%f\n'%(qid, uid, score))
 

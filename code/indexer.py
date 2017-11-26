@@ -58,34 +58,42 @@ def build(input_content_file, output_doc_length_file, output_doc_freq_file, outp
 
 
 def make_queries(input_content_file, input_qrel_file, input_qid_file, output_queries_file):
-    uids = []
+    uids = {}
     with open(input_content_file) as file:
+        cnt = 0
         for line in file:
+            cnt += 1
+            if cnt % 5000 == 0:
+                print 'READ UIDS', cnt
             attr = re.split('[\t ]+', line.strip())
             uid = attr[0]
-            uids.append(uid)
-    uids = list(set(uids))
+            uids[uid] = 0
+    # uids = list(set(uids))
     print 'uids length:', len(uids)
 
     qid_uids_dict = {}
     qid_rels_dict = {}
 
     with open(input_qrel_file) as file:
+        cnt = 0
         for line in file:
+            cnt += 1
+            if cnt % 5000 == 0:
+                print 'READ QRELS', cnt
             attr = re.split('[\t ]+', line.strip())
             qid = attr[0].strip()
             uid = attr[1].strip()
-            rel = attr[2].strip()
+            # rel = ':'.join(attr[2:]).strip()
             if uid not in uids:
                 continue
             if qid not in qid_uids_dict:
                 qid_uids_dict[qid] = []
 
-            if qid not in qid_rels_dict:
-                qid_rels_dict[qid] = []
+            # if qid not in qid_rels_dict:
+            #     qid_rels_dict[qid] = []
 
             qid_uids_dict[qid].append(uid)
-            qid_rels_dict[qid].append(rel)
+            # qid_rels_dict[qid].append(rel)
 
             # if qid not in qid_uids_rel_dict:
             #     qid_uids_rel_dict[qid] = {}
@@ -107,7 +115,8 @@ def make_queries(input_content_file, input_qrel_file, input_qid_file, output_que
         for qid in qid_uids_dict:
             if qid not in qid_query_dict:
                 continue
-            output.write(qid + '\t' + qid_query_dict[qid] + '\t' + ' '.join(qid_uids_dict[qid]) +'\t'+' '.join(qid_rels_dict[qid])+ '\n')
+            output.write(qid+'\t'+qid_query_dict[qid] + '\t' + ' '.join(qid_uids_dict[qid])+'\n') #  +'\t'+' '.join(qid_rels_dict[qid])+ '\n')
+            # output.write(qid + '\t' + qid_query_dict[qid] + '\t' + ' '.join(qid_uids_dict[qid]) +'\t'+' '.join(qid_rels_dict[qid])+ '\n')
 
 #
 # if __name__ == "__main__":
