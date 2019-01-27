@@ -1,5 +1,6 @@
 import re
 import math
+import tqdm
 
 
 class BM25():
@@ -18,8 +19,8 @@ class BM25():
         self.R = 0.0
 
         self.uids, self.query_info = self.read_queries()
-        self.avg_doc_len, self.doc_len_dict = self.cal_doc_len()
-        self.num_of_docs = len(self.doc_len_dict)
+        self.avg_doc_len, self.doc_len_dict, self.num_of_docs = self.cal_doc_len()
+        # print self.num_of_docs
         self.df = self.read_df()
         self.index = self.read_index()
         self.bm25_run()
@@ -33,8 +34,8 @@ class BM25():
             cnt = 0
             for line in file:
                 cnt += 1
-                if cnt < 489000: #######################
-                    continue
+                # if cnt < 489000: #######################
+                #     continue
                 if cnt % 500 == 0:
                     print 'READ QUERY', cnt
                 attr = line.strip().split('\t')
@@ -75,7 +76,7 @@ class BM25():
                 total_doc_len += doc_length
 
         avg_doc_len = float(total_doc_len) / num_of_docs
-        return avg_doc_len, doc_len_dict
+        return avg_doc_len, doc_len_dict, num_of_docs
 
 
     # retrieving word and its frequency from the index
@@ -155,7 +156,7 @@ class BM25():
                 print 'BM25', cnt
             # attr = line.strip().split('\t')
             # qid = attr[0].strip()
-            query = self.query_info[qid]['qid']
+            query = self.query_info[qid]['query']
             query_words = query.split()
             uids = self.query_info[qid]['uids']
 

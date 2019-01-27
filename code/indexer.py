@@ -13,8 +13,8 @@ def build(input_content_file, output_doc_length_file, output_doc_freq_file, outp
         for line in file:
             doc_index = {}
             line_cnt += 1
-            if line_cnt % 500 == 0:
-                print 'BUILD DOCF', line_cnt
+            if line_cnt % 5000 == 0:
+                print '\tBUILD DOCF', line_cnt
             attr = re.split('[\t ]+', line.strip())
             if len(attr) < 2:
                 continue
@@ -36,25 +36,25 @@ def build(input_content_file, output_doc_length_file, output_doc_freq_file, outp
                 if w not in df:
                     df[w] = 0
                 df[w] += 1
-    print 'Read docs done!'
+    print '\tRead docs done!'
 
     with open(output_doc_length_file, 'w') as file:
         for doc, length in doc_len.items():
             file.write('%s\t%d\n'%(doc, length))
-    print 'Doc len done!'
+    print '\tDoc len done!'
 
     with open(output_doc_freq_file, 'w') as file:
         for w, f in df.items():
             w = w.encode('utf-8', 'ignore')
             file.write('%s\t%d\n' % (w, f))
-    print 'Df done!'
+    print '\tDf done!'
 
     if isIndex:
         with open(output_index_file, 'w') as file:
             for w, u_f in index.items():
                 u_f_list = ['%s,%d' % (u, f) for u, f in u_f.items()]
                 file.write(w.encode('utf-8', 'ignore') + '\t' + ':'.join(u_f_list) + '\n')
-        print 'Index done!'
+        print '\tIndex done!'
 
 
 def make_queries(input_content_file, input_qrel_file, input_qid_file, output_queries_file):
@@ -64,12 +64,12 @@ def make_queries(input_content_file, input_qrel_file, input_qid_file, output_que
         for line in file:
             cnt += 1
             if cnt % 5000 == 0:
-                print 'READ UIDS', cnt
+                print '\tREAD UIDS', cnt
             attr = re.split('[\t ]+', line.strip())
             uid = attr[0]
             uids[uid] = 0
     # uids = list(set(uids))
-    print 'uids length:', len(uids)
+    print '\tuids length:', len(uids)
 
     qid_uids_dict = {}
     qid_rels_dict = {}
@@ -79,7 +79,7 @@ def make_queries(input_content_file, input_qrel_file, input_qid_file, output_que
         for line in file:
             cnt += 1
             if cnt % 5000 == 0:
-                print 'READ QRELS', cnt
+                print '\tREAD QRELS', cnt
             attr = re.split('[\t ]+', line.strip())
             qid = attr[0].strip()
             uid = attr[1].strip()
@@ -100,7 +100,7 @@ def make_queries(input_content_file, input_qrel_file, input_qid_file, output_que
             # if uid not in qid_uids_rel_dict[qid]:
             #     qid_uids_rel_dict[qid][uid] = rel
 
-    print 'qid_uids_dict', len(qid_uids_dict)
+    print '\tqid_uids_dict', len(qid_uids_dict)
 
     qid_query_dict = {}
 
